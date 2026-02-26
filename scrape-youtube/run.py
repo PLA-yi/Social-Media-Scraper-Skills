@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""YouTube 爬取 — 调用本地 scraper 服务 API"""
+
+import argparse
+import json
+import sys
+import urllib.request
+
+SERVER = "http://localhost:8000"
+
+
+def check_server():
+    try:
+        urllib.request.urlopen(SERVER, timeout=3)
+        return True
+    except Exception:
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="YouTube 爬取")
+    parser.add_argument("--target", required=True, help="搜索关键词或频道链接")
+    parser.add_argument("--mode", choices=["keyword", "blogger"], default="keyword",
+                        help="keyword=关键词搜索  blogger=频道采集")
+    parser.add_argument("--count", type=int, default=10, help="采集视频数量")
+    args = parser.parse_args()
+
+    if not check_server():
+        print("❌ 服务未启动，请先在项目目录执行：python3 server.py")
+        sys.exit(1)
+
+    print(f"▶ YouTube 爬取")
+    print(f"  目标：{args.target}  模式：{args.mode}  数量：{args.count}")
+
+    payload = json.dumps({
+        "platform": "youtube",
+        "target": args.target,
+        "mode": args.mode,
+        "count": args.count,
+    }).encode()
+
+    req = urllib.request.Request(
+        f"{SERVER}/api/scrape",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        result = json.loads(resp.read())
+
+    print(f"✅ 任务已提交：{result}")
+    print(f"📋 实时日志：{SERVER}")
+
+
+if __name__ == "__main__":
+    main()
